@@ -13,6 +13,8 @@ to arrive at the west approach every second".
 # 1. SIMULATION LENGTH
 # ---------------------------------------------------------------------------
 SIMULATION_TIME = 300  # total seconds simulated per run
+SIMULATION_ENGINE = "step"  # "step" reference loop or "simpy" event model
+QUEUE_SAMPLE_INTERVAL = 1  # seconds; detailed SimPy history resolution
 
 # ---------------------------------------------------------------------------
 # 2. TRAFFIC DEMAND (vehicles arriving per second, per approach)
@@ -33,6 +35,9 @@ DEMAND = {
     "NE": INCOMING_NE,
 }
 
+# Optional OD demand in vehicles per second. Leave empty to use DEMAND.
+OD_DEMAND = {}
+
 # ---------------------------------------------------------------------------
 # 3. SIGNAL TIMING (signalised designs only)
 # ---------------------------------------------------------------------------
@@ -50,6 +55,10 @@ DEFAULT_DEPARTURE_TRAVEL_TIME = 1
 
 DEFAULT_LINK_CAPACITY = 6  # short connector edges (staggered link, ring segments)
 DEFAULT_LINK_TRAVEL_TIME = 2
+
+# BPR congestion model parameters: travel time responds to current road load.
+CONGESTION_ALPHA = 0.15
+CONGESTION_BETA = 4.0
 
 # ---------------------------------------------------------------------------
 # 5. ROUNDABOUT-SPECIFIC
@@ -83,3 +92,25 @@ EFFICIENCY_WEIGHTS = {
 # 8. OUTPUT
 # ---------------------------------------------------------------------------
 OUTPUT_DIR = "output"
+
+# ---------------------------------------------------------------------------
+# 9. OSM STUDY DEFAULTS
+# ---------------------------------------------------------------------------
+OSM_PLACE = "Bangkok, Thailand"
+OSM_NETWORK_TYPE = "drive"
+OSM_ANALYSIS_RADIUS_M = 1000
+OSM_INTERSECTION_BUFFER_M = 40
+
+
+def validate_config() -> None:
+    """Fail early when an experiment has invalid research parameters."""
+    if SIMULATION_TIME <= 0 or QUEUE_SAMPLE_INTERVAL <= 0:
+        raise ValueError("simulation and queue-sample times must be positive")
+    if SIMULATION_ENGINE not in {"step", "simpy"}:
+        raise ValueError("SIMULATION_ENGINE must be 'step' or 'simpy'")
+    if any(value < 0 for value in DEMAND.values()):
+        raise ValueError("DEMAND values must be non-negative")
+    if abs(sum(EFFICIENCY_WEIGHTS.values()) - 1.0) >= 1e-9:
+        raise ValueError("EFFICIENCY_WEIGHTS must sum to 1")
+    if CONGESTION_ALPHA < 0 or CONGESTION_BETA <= 0:
+        raise ValueError("invalid BPR congestion parameters")

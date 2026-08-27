@@ -13,7 +13,6 @@ We use networkx as the graph engine for the pure graph-theory analysis
 for the simulation state (capacity, vehicles currently on the segment).
 """
 
-from typing import Set
 import networkx as nx
 
 from road import Road
@@ -28,7 +27,7 @@ class IntersectionNetwork:
         self.roads: dict[tuple[str, str], Road] = {}
         self.entry_nodes: list[str] = []  # where vehicles are generated
         self.exit_nodes: list[str] = []  # where vehicles leave the system
-        self.controlled_edges: Set[tuple[str, str]] = (
+        self.controlled_edges: set[tuple[str, str]] = (
             set()
         )  # gated by a TrafficController
 
@@ -42,7 +41,7 @@ class IntersectionNetwork:
         capacity: int,
         travel_time: int,
         controlled: bool = False,
-        length: float = None,
+        length: float | None = None,
     ) -> Road:
         road = Road(
             start=start,
@@ -164,6 +163,14 @@ class IntersectionNetwork:
     def edge_betweenness_centrality(self) -> dict[tuple[str, str], float]:
         return nx.edge_betweenness_centrality(self.nx_graph, weight="weight")
 
+    def weighted_efficiency(
+        self, demand: dict[tuple[str, str], float] | None = None
+    ) -> float:
+        """Mean reciprocal shortest travel time, optionally demand-weighted."""
+        from efficiency import weighted_efficiency
+
+        return weighted_efficiency(self.nx_graph, demand=demand, weight="weight")
+
     def structural_summary(self) -> dict:
         core_degrees = self.core_node_degrees()
         return {
@@ -173,6 +180,7 @@ class IntersectionNetwork:
             "core_node_degrees": core_degrees,
             "max_core_degree": max(core_degrees.values()) if core_degrees else 0,
             "avg_path_length_sec": round(self.average_path_length(), 3),
+            "weighted_efficiency": round(self.weighted_efficiency(), 6),
             "fully_connected": all(self.connectivity_report().values()),
             "num_entry_approaches": len(self.entry_nodes),
             "top_betweenness_node": max(

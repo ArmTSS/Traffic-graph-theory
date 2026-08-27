@@ -11,6 +11,9 @@ ENTER it once it is at capacity -- they queue up at the node behind it.
 
 from dataclasses import dataclass, field
 
+import config as cfg
+from congestion import bpr_travel_time
+
 
 @dataclass
 class Road:
@@ -41,9 +44,27 @@ class Road:
     def has_capacity(self) -> bool:
         return len(self.vehicles_on_road) < self.capacity
 
+    @property
+    def free_flow_travel_time(self) -> float:
+        return float(self.travel_time)
+
+    def congested_travel_time(self) -> int:
+        return max(
+            1,
+            round(
+                bpr_travel_time(
+                    self.free_flow_travel_time,
+                    len(self.vehicles_on_road),
+                    self.capacity,
+                    cfg.CONGESTION_ALPHA,
+                    cfg.CONGESTION_BETA,
+                )
+            ),
+        )
+
     def enter(self, vehicle):
         """Admit a vehicle onto this road. Caller must check has_capacity() first."""
-        vehicle.advance(self.travel_time)
+        vehicle.advance(self.congested_travel_time())
         self.vehicles_on_road.append(vehicle)
         self.total_entries += 1
 

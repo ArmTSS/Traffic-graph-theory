@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import sys
 import pandas as pd
@@ -38,6 +39,8 @@ from experiments import (
 )
 from validation import run_all_validations
 from visualization import generate_all_plots
+from osm_network import load_osm_network, intersection_candidates
+from intersection_geometry import extract_intersection_geometry
 
 
 def build_results_table(exp_a_output: dict) -> pd.DataFrame:
@@ -72,6 +75,7 @@ def build_graph_theory_table(exp_a_output: dict) -> pd.DataFrame:
                 "Approaches": s["num_entry_approaches"],
                 "Max Core Degree": s["max_core_degree"],
                 "Avg Path Length (s)": s["avg_path_length_sec"],
+                "Weighted Graph Efficiency": s["weighted_efficiency"],
                 "Fully Connected": s["fully_connected"],
                 "Highest-Betweenness Node": s["top_betweenness_node"],
             }
@@ -115,7 +119,70 @@ def main():
     )
     parser.add_argument("--quick", action="store_true", help="fast smoke-test run")
     parser.add_argument("--outdir", default=cfg.OUTPUT_DIR)
+    parser.add_argument(
+        "--engine",
+        choices=("step", "simpy"),
+        default=cfg.SIMULATION_ENGINE,
+        help="traffic simulation backend",
+    )
+    parser.add_argument("--osm-place", help="optional OSM place to inspect")
+    parser.add_argument("--osm-latitude", type=float)
+    parser.add_argument("--osm-longitude", type=float)
+    parser.add_argument("--osm-radius", type=float, default=cfg.OSM_ANALYSIS_RADIUS_M)
+    parser.add_argument("--osm-node", help="optional OSM node ID for geometry")
+    parser.add_argument(
+        "--od-demand",
+        help='optional JSON file with OD keys such as {"N->S": 2}',
+    )
     args = parser.parse_args()
+    cfg.validate_config()
+
+    if (args.osm_latitude is None) != (args.osm_longitude is None):
+        parser.error("--osm-latitude and --osm-longitude must be supplied together")
+
+    od_demand = None
+    if args.od_demand:
+        try:
+            with open(args.od_demand, encoding="utf-8") as demand_file:
+                raw_demand = json.load(demand_file)
+            od_demand = {}
+            for key, value in raw_demand.items():
+                origin, destination = key.split("->", maxsplit=1)
+                od_demand[(origin.strip(), destination.strip())] = float(value)
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+            parser.error(f"invalid OD demand file: {exc}")
+
+    if args.osm_place or args.osm_latitude is not None:
+        print("\nOSM NETWORK INSPECTION")
+        try:
+            osm = load_osm_network(
+                place=args.osm_place,
+                latitude=args.osm_latitude,
+                longitude=args.osm_longitude,
+                radius_m=args.osm_radius,
+            )
+            candidates = intersection_candidates(osm.graph)
+            print(f"Source: {osm.source}")
+            print(
+                f"Network: {osm.graph.number_of_nodes()} nodes, "
+                f"{osm.graph.number_of_edges()} edges"
+            )
+            print(f"Top intersection candidates: {candidates[:5]}")
+            if args.osm_node is not None:
+                node_id = args.osm_node
+                if node_id not in osm.nodes.index:
+                    try:
+                        node_id = int(node_id)
+                    except ValueError:
+                        pass
+                geometry = extract_intersection_geometry(osm.nodes, osm.edges, node_id)
+                print(
+                    f"Selected node {node_id}: "
+                    f"{len(geometry.nearby_edges)} nearby road geometries, "
+                    f"{geometry.projected_crs}"
+                )
+        except (KeyError, RuntimeError, ValueError) as exc:
+            parser.error(f"OSM inspection failed: {exc}")
 
     sim_time = 60 if args.quick else cfg.SIMULATION_TIME
     n_runs = 3 if args.quick else cfg.NUMBER_OF_RUNS
@@ -130,9 +197,11 @@ def main():
 
     print(
         f"\nConfiguration: SIMULATION_TIME={sim_time}s, NUMBER_OF_RUNS={n_runs}, "
-        f"RANDOM_SEED={cfg.RANDOM_SEED}"
+        f"RANDOM_SEED={cfg.RANDOM_SEED}, ENGINE={args.engine}"
     )
     print(f"Traffic demand (vehicles/sec): {cfg.DEMAND}")
+    if od_demand is not None:
+        print(f"OD demand (vehicles/sec): {od_demand}")
     print(f"Signal green time: {cfg.GREEN_LIGHT_TIME}s")
 
     # -----------------------------------------------------------------
@@ -158,7 +227,11 @@ def main():
     print("EXPERIMENT A: Same traffic demand, different intersection designs")
     print("=" * 78)
     exp_a = compare_intersections(
-        designs=list(DESIGN_REGISTRY.keys()), simulation_time=sim_time, n_runs=n_runs
+        designs=list(DESIGN_REGISTRY.keys()),
+        simulation_time=sim_time,
+        n_runs=n_runs,
+        engine=args.engine,
+        od_demand=od_demand,
     )
 
     results_table = build_results_table(exp_a)
@@ -176,7 +249,7 @@ def main():
     print("\n" + "=" * 78)
     print("EXPERIMENT B: Increasing traffic demand")
     print("=" * 78)
-    exp_b = run_experiment_b(sim_time=sim_time, n_runs=n_runs)
+    exp_b = run_experiment_b(sim_time=sim_time, n_runs=n_runs, engine=args.engine)
     print("\n--- Interpretation ---")
     print(interpret_experiment_b(exp_b))
 
@@ -184,7 +257,7 @@ def main():
     print("\n" + "=" * 78)
     print("EXPERIMENT C: Traffic-light timing sweep (signalised designs only)")
     print("=" * 78)
-    exp_c = run_experiment_c(sim_time=sim_time, n_runs=n_runs)
+    exp_c = run_experiment_c(sim_time=sim_time, n_runs=n_runs, engine=args.engine)
     print("\n--- Interpretation ---")
     print(interpret_experiment_c(exp_c))
 
@@ -192,7 +265,7 @@ def main():
     print("\n" + "=" * 78)
     print("EXPERIMENT D: Bottleneck analysis")
     print("=" * 78)
-    exp_d = run_experiment_d(sim_time=sim_time, n_runs=n_runs)
+    exp_d = run_experiment_d(sim_time=sim_time, n_runs=n_runs, engine=args.engine)
     print("\n--- Interpretation ---")
     print(interpret_experiment_d(exp_d))
 

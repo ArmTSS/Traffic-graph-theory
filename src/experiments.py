@@ -25,6 +25,7 @@ from metrics import (
     find_bottleneck_edges,
 )
 from graph_model import IntersectionNetwork
+from demand import od_demand_to_inputs
 
 
 def _run_design_repeated(
@@ -34,6 +35,8 @@ def _run_design_repeated(
     n_runs: int,
     base_seed: int,
     green_light_time: int = None,
+    engine: str = "step",
+    destination_probs_override: dict[str, dict[str, float]] | None = None,
 ):
     """Run one design n_runs times with different seeds; return
     (AggregatedMetrics, list_of_raw_SimulationResult, IntersectionNetwork)."""
@@ -43,9 +46,18 @@ def _run_design_repeated(
     for i in range(n_runs):
         # rebuild fresh each run so vehicle-on-road state never leaks between runs
         net, controller, dest_probs = DESIGN_REGISTRY[design_key]()
+        if destination_probs_override is not None:
+            dest_probs = destination_probs_override
         if green_light_time is not None:
             _override_green_time(controller, green_light_time)
-        sim = TrafficSimulation(
+        simulator_class = TrafficSimulation
+        if engine == "simpy":
+            from simpy_simulation import SimPyTrafficSimulation
+
+            simulator_class = SimPyTrafficSimulation
+        elif engine != "step":
+            raise ValueError("engine must be 'step' or 'simpy'")
+        sim = simulator_class(
             net,
             controller,
             dest_probs,
@@ -82,9 +94,15 @@ def run_experiment_a(
     sim_time: int = None,
     n_runs: int = None,
     seed: int = None,
+    engine: str = "step",
+    od_demand: dict[tuple[str, str], float] | None = None,
 ):
     designs = designs or list(DESIGN_REGISTRY.keys())
-    demand = demand or cfg.DEMAND
+    if od_demand is not None:
+        demand, destination_probs = od_demand_to_inputs(od_demand)
+    else:
+        demand = demand or cfg.DEMAND
+        destination_probs = None
     sim_time = sim_time or cfg.SIMULATION_TIME
     n_runs = n_runs or cfg.NUMBER_OF_RUNS
     seed = seed if seed is not None else cfg.RANDOM_SEED
@@ -94,7 +112,15 @@ def run_experiment_a(
     sample_raw = {}
     all_raw = {}
     for key in designs:
-        agg, raw, net = _run_design_repeated(key, demand, sim_time, n_runs, seed)
+        agg, raw, net = _run_design_repeated(
+            key,
+            demand,
+            sim_time,
+            n_runs,
+            seed,
+            engine=engine,
+            destination_probs_override=destination_probs,
+        )
         results[key] = agg
         networks[key] = net
         sample_raw[key] = raw[0]  # first seed's raw result, used for structural plots
@@ -107,6 +133,8 @@ def run_experiment_a(
         "demand": demand,
         "sim_time": sim_time,
         "n_runs": n_runs,
+        "engine": engine,
+        "od_demand": od_demand,
     }
 
 
@@ -132,6 +160,7 @@ def run_experiment_b(
     sim_time: int = None,
     n_runs: int = None,
     seed: int = None,
+    engine: str = "step",
 ):
     designs = designs or list(DESIGN_REGISTRY.keys())
     demand_levels = demand_levels or DEMAND_LEVELS
@@ -143,13 +172,16 @@ def run_experiment_b(
     results = {key: {} for key in designs}
     for level_name, demand in demand_levels.items():
         for key in designs:
-            agg, _, _ = _run_design_repeated(key, demand, sim_time, n_runs, seed)
+            agg, _, _ = _run_design_repeated(
+                key, demand, sim_time, n_runs, seed, engine=engine
+            )
             results[key][level_name] = agg
     return {
         "results": results,
         "demand_levels": demand_levels,
         "sim_time": sim_time,
         "n_runs": n_runs,
+        "engine": engine,
     }
 
 
@@ -166,6 +198,7 @@ def run_experiment_c(
     sim_time: int = None,
     n_runs: int = None,
     seed: int = None,
+    engine: str = "step",
 ):
     from controller import FixedTimeSignalController
 
@@ -181,7 +214,13 @@ def run_experiment_c(
     for key in designs:
         for g in green_times:
             agg, _, _ = _run_design_repeated(
-                key, demand, sim_time, n_runs, seed, green_light_time=g
+                key,
+                demand,
+                sim_time,
+                n_runs,
+                seed,
+                green_light_time=g,
+                engine=engine,
             )
             results[key][g] = agg
     return {
@@ -189,6 +228,7 @@ def run_experiment_c(
         "green_times": green_times,
         "sim_time": sim_time,
         "n_runs": n_runs,
+        "engine": engine,
     }
 
 
@@ -208,6 +248,7 @@ def run_experiment_d(
     sim_time: int = None,
     n_runs: int = None,
     seed: int = None,
+    engine: str = "step",
 ):
     designs = designs or list(DESIGN_REGISTRY.keys())
     demand = demand or cfg.DEMAND
@@ -218,7 +259,9 @@ def run_experiment_d(
     bottlenecks = {}
     for key in designs:
         # average saturation per edge across all repeated runs
-        _, raw_results, net = _run_design_repeated(key, demand, sim_time, n_runs, seed)
+        _, raw_results, net = _run_design_repeated(
+            key, demand, sim_time, n_runs, seed, engine=engine
+        )
         edge_sat_sums: dict = {}
         for r in raw_results:
             for edge, sat in r.edge_saturation.items():
