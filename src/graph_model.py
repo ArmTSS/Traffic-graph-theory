@@ -13,9 +13,42 @@ We use networkx as the graph engine for the pure graph-theory analysis
 for the simulation state (capacity, vehicles currently on the segment).
 """
 
+import math
+
 import networkx as nx
 
 from road import Road
+
+
+def weighted_graph_efficiency(
+    graph: nx.DiGraph,
+    demand: dict[tuple[object, object], float] | None = None,
+    weight: str = "travel_time",
+) -> float:
+    """Return mean reciprocal shortest-path travel time."""
+    if graph.number_of_nodes() < 2:
+        return 0.0
+    pairs = demand or {
+        (source, target): 1.0
+        for source in graph
+        for target in graph
+        if source != target
+    }
+    total_weight = 0.0
+    total_efficiency = 0.0
+    for (source, target), pair_demand in pairs.items():
+        if pair_demand < 0:
+            raise ValueError("demand values must be non-negative")
+        total_weight += pair_demand
+        try:
+            travel_time = nx.shortest_path_length(
+                graph, source, target, weight=weight
+            )
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            continue
+        if travel_time > 0 and math.isfinite(travel_time):
+            total_efficiency += pair_demand / travel_time
+    return total_efficiency / total_weight if total_weight else 0.0
 
 
 class IntersectionNetwork:
@@ -167,9 +200,9 @@ class IntersectionNetwork:
         self, demand: dict[tuple[str, str], float] | None = None
     ) -> float:
         """Mean reciprocal shortest travel time, optionally demand-weighted."""
-        from efficiency import weighted_efficiency
-
-        return weighted_efficiency(self.nx_graph, demand=demand, weight="weight")
+        return weighted_graph_efficiency(
+            self.nx_graph, demand=demand, weight="weight"
+        )
 
     def structural_summary(self) -> dict:
         core_degrees = self.core_node_degrees()

@@ -1,0 +1,6 @@
+Intersection,Avg Waiting (s),Max Queue,Throughput (veh/s),Completion %,Avg Route Length (edges),Efficiency
+Four-Way,18.5,292.3,5.622,55.4,2.0,0.498
+T-Intersection,6.3,146.3,6.061,70.9,2.0,0.632
+Staggered,10.9,341.0,4.422,43.6,2.63,0.46
+Roundabout,18.9,548.3,1.011,9.8,4.93,0.227
+Five-Way,18.3,339.7,5.65,50.5,2.0,0.484

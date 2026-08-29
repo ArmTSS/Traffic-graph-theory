@@ -1,0 +1,641 @@
+{
+  "district": "Khlong Sam Wa, Bangkok, Thailand",
+  "coordinate_reference_system": "EPSG:4326",
+  "selection": {
+    "count": 10,
+    "method": "Likely geometric, fully bidirectional arterial four-way nodes; ranked by approximate length-weighted betweenness with spatial separation.",
+    "compass_assignment": "One-to-one assignment minimizing angular difference from north, east, south, and west. Directions are approximate."
+  },
+  "intersections": [
+    {
+      "importance_rank": 1,
+      "osm_node_id": "350390643",
+      "osm_url": "https://www.openstreetmap.org/node/350390643",
+      "coordinates": {
+        "latitude": 13.841924,
+        "longitude": 100.7131838
+      },
+      "street_names": "ถนนสุเหร่าคลองหนึ่ง; ถนนเจริญพัฒนา",
+      "highway_types": "secondary; tertiary",
+      "betweenness_centrality": 0.1701371889024888,
+      "cross_score": 0.9866,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "8201564391",
+          "street_name": "ถนนเจริญพัฒนา",
+          "highway_type": "tertiary",
+          "bearing_degrees": 5.31,
+          "bearing_offset_from_compass_degrees": 5.31,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "8201071378",
+          "street_name": "ถนนสุเหร่าคลองหนึ่ง",
+          "highway_type": "secondary",
+          "bearing_degrees": 94.87,
+          "bearing_offset_from_compass_degrees": 4.87,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "6124096991",
+          "street_name": "ถนนเจริญพัฒนา",
+          "highway_type": "tertiary",
+          "bearing_degrees": 187.28,
+          "bearing_offset_from_compass_degrees": 7.28,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "6124096990",
+          "street_name": "ถนนสุเหร่าคลองหนึ่ง",
+          "highway_type": "secondary",
+          "bearing_degrees": 276.85,
+          "bearing_offset_from_compass_degrees": 6.85,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 2,
+      "osm_node_id": "2722951931",
+      "osm_url": "https://www.openstreetmap.org/node/2722951931",
+      "coordinates": {
+        "latitude": 13.8941035,
+        "longitude": 100.7034483
+      },
+      "street_names": "ซอยหนองระแหง 5; ถนนไทยรามัญ",
+      "highway_types": "residential; tertiary",
+      "betweenness_centrality": 0.1164121787025704,
+      "cross_score": 0.9165,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "8323516709",
+          "street_name": "ซอยหนองระแหง 5",
+          "highway_type": "residential",
+          "bearing_degrees": 356.78,
+          "bearing_offset_from_compass_degrees": 3.22,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "5941670492",
+          "street_name": "ถนนไทยรามัญ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 77.33,
+          "bearing_offset_from_compass_degrees": 12.67,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "6131175743",
+          "street_name": "ซอยหนองระแหง 5",
+          "highway_type": "residential",
+          "bearing_degrees": 176.14,
+          "bearing_offset_from_compass_degrees": 3.86,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "5941752933",
+          "street_name": "ถนนไทยรามัญ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 260.56,
+          "bearing_offset_from_compass_degrees": 9.44,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 3,
+      "osm_node_id": "3053324433",
+      "osm_url": "https://www.openstreetmap.org/node/3053324433",
+      "coordinates": {
+        "latitude": 13.8860863,
+        "longitude": 100.7221994
+      },
+      "street_names": "ถนนหทัยราษฎร์",
+      "highway_types": "residential; secondary",
+      "betweenness_centrality": 0.10910546715626276,
+      "cross_score": 0.989,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "5941639349",
+          "street_name": "ถนนหทัยราษฎร์",
+          "highway_type": "secondary",
+          "bearing_degrees": 359.56,
+          "bearing_offset_from_compass_degrees": 0.44,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "3053324448",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 87.82,
+          "bearing_offset_from_compass_degrees": 2.18,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "6124182917",
+          "street_name": "ถนนหทัยราษฎร์",
+          "highway_type": "secondary",
+          "bearing_degrees": 178.36,
+          "bearing_offset_from_compass_degrees": 1.64,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "8073679424",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 268.11,
+          "bearing_offset_from_compass_degrees": 1.89,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 4,
+      "osm_node_id": "3834754707",
+      "osm_url": "https://www.openstreetmap.org/node/3834754707",
+      "coordinates": {
+        "latitude": 13.8597869,
+        "longitude": 100.7350807
+      },
+      "street_names": "ซอย วัดสุขใจ; ซอยวัดสุขใจ; วัดสุขใจ 1; วัดสุขใจ 4",
+      "highway_types": "residential; tertiary",
+      "betweenness_centrality": 0.10360159118727051,
+      "cross_score": 0.9381,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "3834754752",
+          "street_name": "วัดสุขใจ 1",
+          "highway_type": "residential",
+          "bearing_degrees": 347.18,
+          "bearing_offset_from_compass_degrees": 12.82,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "3834754699",
+          "street_name": "ซอยวัดสุขใจ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 83.68,
+          "bearing_offset_from_compass_degrees": 6.32,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "3839892569",
+          "street_name": "วัดสุขใจ 4",
+          "highway_type": "residential",
+          "bearing_degrees": 168.24,
+          "bearing_offset_from_compass_degrees": 11.76,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "3839892586",
+          "street_name": "ซอย วัดสุขใจ; ซอยวัดสุขใจ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 262.88,
+          "bearing_offset_from_compass_degrees": 7.12,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 5,
+      "osm_node_id": "5877834594",
+      "osm_url": "https://www.openstreetmap.org/node/5877834594",
+      "coordinates": {
+        "latitude": 13.8601908,
+        "longitude": 100.7403845
+      },
+      "street_names": "ซอยวัดสุขใจ",
+      "highway_types": "residential; tertiary",
+      "betweenness_centrality": 0.10206956344349247,
+      "cross_score": 0.7728,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "5877834589",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 359.0,
+          "bearing_offset_from_compass_degrees": 1.0,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "5877834596",
+          "street_name": "ซอยวัดสุขใจ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 62.88,
+          "bearing_offset_from_compass_degrees": 27.12,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "8447601555",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 167.61,
+          "bearing_offset_from_compass_degrees": 12.39,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "3834754712",
+          "street_name": "ซอยวัดสุขใจ",
+          "highway_type": "tertiary",
+          "bearing_degrees": 242.83,
+          "bearing_offset_from_compass_degrees": 27.17,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 6,
+      "osm_node_id": "2739129171",
+      "osm_url": "https://www.openstreetmap.org/node/2739129171",
+      "coordinates": {
+        "latitude": 13.8694104,
+        "longitude": 100.7749543
+      },
+      "street_names": "วัดสุขใจ 36",
+      "highway_types": "residential; tertiary",
+      "betweenness_centrality": 0.09250968992248063,
+      "cross_score": 0.7214,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "8186441949",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 346.62,
+          "bearing_offset_from_compass_degrees": 13.38,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "2739129170",
+          "street_name": "วัดสุขใจ 36",
+          "highway_type": "tertiary",
+          "bearing_degrees": 100.17,
+          "bearing_offset_from_compass_degrees": 10.17,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "8608023568",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 164.45,
+          "bearing_offset_from_compass_degrees": 15.55,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "2739129173",
+          "street_name": "วัดสุขใจ 36",
+          "highway_type": "tertiary",
+          "bearing_degrees": 281.05,
+          "bearing_offset_from_compass_degrees": 11.05,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 7,
+      "osm_node_id": "3017429961",
+      "osm_url": "https://www.openstreetmap.org/node/3017429961",
+      "coordinates": {
+        "latitude": 13.8311443,
+        "longitude": 100.7610659
+      },
+      "street_names": "ถนนประชาร่วมใจ",
+      "highway_types": "residential; secondary",
+      "betweenness_centrality": 0.08698490412076704,
+      "cross_score": 0.9528,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "3017429976",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 331.33,
+          "bearing_offset_from_compass_degrees": 28.67,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "1669530692",
+          "street_name": "ถนนประชาร่วมใจ",
+          "highway_type": "secondary",
+          "bearing_degrees": 57.41,
+          "bearing_offset_from_compass_degrees": 32.59,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "5883318906",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 149.6,
+          "bearing_offset_from_compass_degrees": 30.4,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "5883318905",
+          "street_name": "ถนนประชาร่วมใจ",
+          "highway_type": "secondary",
+          "bearing_degrees": 235.02,
+          "bearing_offset_from_compass_degrees": 34.98,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 8,
+      "osm_node_id": "6128822544",
+      "osm_url": "https://www.openstreetmap.org/node/6128822544",
+      "coordinates": {
+        "latitude": 13.8408751,
+        "longitude": 100.698682
+      },
+      "street_names": "ถนนสุเหร่าคลองหนึ่ง; สุเหร่าคลองหนึ่ง 2",
+      "highway_types": "residential; secondary",
+      "betweenness_centrality": 0.07001478988168096,
+      "cross_score": 0.9103,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "9343429231",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 0.31,
+          "bearing_offset_from_compass_degrees": 0.31,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "8295400021",
+          "street_name": "ถนนสุเหร่าคลองหนึ่ง",
+          "highway_type": "secondary",
+          "bearing_degrees": 81.91,
+          "bearing_offset_from_compass_degrees": 8.09,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "6128822543",
+          "street_name": "สุเหร่าคลองหนึ่ง 2",
+          "highway_type": "residential",
+          "bearing_degrees": 179.66,
+          "bearing_offset_from_compass_degrees": 0.34,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "8295400019",
+          "street_name": "ถนนสุเหร่าคลองหนึ่ง",
+          "highway_type": "secondary",
+          "bearing_degrees": 261.91,
+          "bearing_offset_from_compass_degrees": 8.09,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 9,
+      "osm_node_id": "2722951940",
+      "osm_url": "https://www.openstreetmap.org/node/2722951940",
+      "coordinates": {
+        "latitude": 13.9061458,
+        "longitude": 100.6996359
+      },
+      "street_names": "ซอยหนองระแหง 5; ถนนหนองระแหง",
+      "highway_types": "residential; tertiary",
+      "betweenness_centrality": 0.06566299469604243,
+      "cross_score": 0.9103,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "8323516703",
+          "street_name": null,
+          "highway_type": "residential",
+          "bearing_degrees": 309.1,
+          "bearing_offset_from_compass_degrees": 50.9,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "5936033922",
+          "street_name": "ถนนหนองระแหง",
+          "highway_type": "tertiary",
+          "bearing_degrees": 50.72,
+          "bearing_offset_from_compass_degrees": 39.28,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "8323516709",
+          "street_name": "ซอยหนองระแหง 5",
+          "highway_type": "residential",
+          "bearing_degrees": 142.67,
+          "bearing_offset_from_compass_degrees": 37.33,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "8323516714",
+          "street_name": "ถนนหนองระแหง",
+          "highway_type": "tertiary",
+          "bearing_degrees": 235.25,
+          "bearing_offset_from_compass_degrees": 34.75,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    },
+    {
+      "importance_rank": 10,
+      "osm_node_id": "3010327836",
+      "osm_url": "https://www.openstreetmap.org/node/3010327836",
+      "coordinates": {
+        "latitude": 13.8353969,
+        "longitude": 100.7675243
+      },
+      "street_names": "ซอยประชาร่วมใจ 33; ซอยประชาร่วมใจ 44; ถนนประชาร่วมใจ",
+      "highway_types": "residential; secondary",
+      "betweenness_centrality": 0.05310179518563852,
+      "cross_score": 0.9519,
+      "osm_traffic_signal_tag": false,
+      "baseline_control_assumption": "assumed fixed-time signal",
+      "opposite_road_pairs": [
+        [
+          "north",
+          "south"
+        ],
+        [
+          "east",
+          "west"
+        ]
+      ],
+      "roads": {
+        "north": {
+          "connected_osm_node": "8182260087",
+          "street_name": "ซอยประชาร่วมใจ 33",
+          "highway_type": "residential",
+          "bearing_degrees": 329.55,
+          "bearing_offset_from_compass_degrees": 30.45,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "east": {
+          "connected_osm_node": "5819567003",
+          "street_name": "ถนนประชาร่วมใจ",
+          "highway_type": "secondary",
+          "bearing_degrees": 55.26,
+          "bearing_offset_from_compass_degrees": 34.74,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "south": {
+          "connected_osm_node": "3010327299",
+          "street_name": "ซอยประชาร่วมใจ 44",
+          "highway_type": "residential",
+          "bearing_degrees": 149.52,
+          "bearing_offset_from_compass_degrees": 30.48,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        },
+        "west": {
+          "connected_osm_node": "3010327329",
+          "street_name": "ถนนประชาร่วมใจ",
+          "highway_type": "secondary",
+          "bearing_degrees": 235.16,
+          "bearing_offset_from_compass_degrees": 34.84,
+          "travel_toward_intersection": true,
+          "travel_away_from_intersection": true
+        }
+      }
+    }
+  ]
+}

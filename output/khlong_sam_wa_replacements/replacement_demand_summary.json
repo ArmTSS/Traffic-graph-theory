@@ -1,0 +1,134 @@
+[
+  {
+    "demand_level": "low",
+    "total_demand_rate": 0.5,
+    "design": "four_way",
+    "design_name": "Existing Signalized Four-Way",
+    "mean_efficiency": 0.8486307609807578,
+    "efficiency_change_pct": 0.0,
+    "mean_waiting_s": 10.269093056941433,
+    "waiting_change_pct": 0.0,
+    "mean_throughput": 0.44226666666666664
+  },
+  {
+    "demand_level": "low",
+    "total_demand_rate": 0.5,
+    "design": "roundabout",
+    "design_name": "Roundabout",
+    "mean_efficiency": 0.9198718345999112,
+    "efficiency_change_pct": 8.40400627846801,
+    "mean_waiting_s": 1.2572938659729425,
+    "waiting_change_pct": -87.74464532686916,
+    "mean_throughput": 0.44703333333333334
+  },
+  {
+    "demand_level": "low",
+    "total_demand_rate": 0.5,
+    "design": "flyover",
+    "design_name": "Flyover",
+    "mean_efficiency": 0.8611846769694849,
+    "efficiency_change_pct": 1.4796505721295865,
+    "mean_waiting_s": 8.702175207303885,
+    "waiting_change_pct": -15.243392986979114,
+    "mean_throughput": 0.44370000000000004
+  },
+  {
+    "demand_level": "low",
+    "total_demand_rate": 0.5,
+    "design": "underpass",
+    "design_name": "Underpass",
+    "mean_efficiency": 0.8611846769694849,
+    "efficiency_change_pct": 1.4796505721295865,
+    "mean_waiting_s": 8.702175207303885,
+    "waiting_change_pct": -15.243392986979114,
+    "mean_throughput": 0.44370000000000004
+  },
+  {
+    "demand_level": "medium",
+    "total_demand_rate": 1.0,
+    "design": "four_way",
+    "design_name": "Existing Signalized Four-Way",
+    "mean_efficiency": 0.8350649655747263,
+    "efficiency_change_pct": 0.0,
+    "mean_waiting_s": 11.437755759304542,
+    "waiting_change_pct": 0.0,
+    "mean_throughput": 0.9006666666666666
+  },
+  {
+    "demand_level": "medium",
+    "total_demand_rate": 1.0,
+    "design": "roundabout",
+    "design_name": "Roundabout",
+    "mean_efficiency": 0.812021900856368,
+    "efficiency_change_pct": -2.7465702694320884,
+    "mean_waiting_s": 12.070616548273396,
+    "waiting_change_pct": 5.636360242746498,
+    "mean_throughput": 0.8789999999999999
+  },
+  {
+    "demand_level": "medium",
+    "total_demand_rate": 1.0,
+    "design": "flyover",
+    "design_name": "Flyover",
+    "mean_efficiency": 0.8453910541437194,
+    "efficiency_change_pct": 1.2319408951279613,
+    "mean_waiting_s": 10.117733591132572,
+    "waiting_change_pct": -11.49940750925728,
+    "mean_throughput": 0.9014333333333333
+  },
+  {
+    "demand_level": "medium",
+    "total_demand_rate": 1.0,
+    "design": "underpass",
+    "design_name": "Underpass",
+    "mean_efficiency": 0.8453910541437194,
+    "efficiency_change_pct": 1.2319408951279613,
+    "mean_waiting_s": 10.117733591132572,
+    "waiting_change_pct": -11.49940750925728,
+    "mean_throughput": 0.9014333333333333
+  },
+  {
+    "demand_level": "high",
+    "total_demand_rate": 2.0,
+    "design": "four_way",
+    "design_name": "Existing Signalized Four-Way",
+    "mean_efficiency": 0.7792074201819587,
+    "efficiency_change_pct": 0.0,
+    "mean_waiting_s": 15.34784269836634,
+    "waiting_change_pct": 0.0,
+    "mean_throughput": 1.7820333333333334
+  },
+  {
+    "demand_level": "high",
+    "total_demand_rate": 2.0,
+    "design": "roundabout",
+    "design_name": "Roundabout",
+    "mean_efficiency": 0.39884290781750636,
+    "efficiency_change_pct": -48.782009102094776,
+    "mean_waiting_s": 76.42571280899126,
+    "waiting_change_pct": 420.6381452245497,
+    "mean_throughput": 1.0303666666666667
+  },
+  {
+    "demand_level": "high",
+    "total_demand_rate": 2.0,
+    "design": "flyover",
+    "design_name": "Flyover",
+    "mean_efficiency": 0.78522106646883,
+    "efficiency_change_pct": 0.7441327095522544,
+    "mean_waiting_s": 13.852071256580043,
+    "waiting_change_pct": -9.79085225794071,
+    "mean_throughput": 1.7734
+  },
+  {
+    "demand_level": "high",
+    "total_demand_rate": 2.0,
+    "design": "underpass",
+    "design_name": "Underpass",
+    "mean_efficiency": 0.78522106646883,
+    "efficiency_change_pct": 0.7441327095522544,
+    "mean_waiting_s": 13.852071256580043,
+    "waiting_change_pct": -9.79085225794071,
+    "mean_throughput": 1.7734
+  }
+]

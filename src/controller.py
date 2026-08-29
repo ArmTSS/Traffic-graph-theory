@@ -5,16 +5,13 @@ Section 9: traffic-control rules must depend on the intersection design.
 Not every design uses traffic lights -- a roundabout is controlled by a
 yield / gap-acceptance rule instead.
 
-Both controllers implement the same tiny interface:
+All controllers implement the same tiny interface:
 
     is_allowed(edge, t) -> bool
 
-A controller ONLY ever gates the "entry" edges of a network -- the edges
-whose start node is a true traffic-generating approach (N_in, S_in, ...).
-Every other edge (internal links, roundabout ring segments, departure
-edges) is free-flowing and limited only by Road capacity. This mirrors
-reality: a traffic signal (or a yield sign) controls entry into an
-intersection, not what happens once you're already through it.
+A controller gates only explicitly configured edges. Signals gate approach
+edges, while roundabouts gate the short merge edges between entrance queues
+and the circulating ring.
 """
 
 from abc import ABC, abstractmethod
@@ -29,6 +26,16 @@ class TrafficController(ABC):
 
     def current_phase_label(self, t: int) -> str:
         return "n/a"
+
+
+class FreeFlowController(TrafficController):
+    """Controller for road networks whose OSM signal timing is unknown."""
+
+    def is_allowed(self, edge: tuple[str, str], t: int) -> bool:
+        return True
+
+    def describe(self) -> str:
+        return "Free-flow control (capacity constraints only)"
 
 
 class FixedTimeSignalController(TrafficController):
@@ -92,16 +99,27 @@ class FixedTimeSignalController(TrafficController):
 class YieldController(TrafficController):
     """
     Roundabout-style controller (Section 9): there is NO red/green phase.
-    Instead, each entry approach may merge at most `max_entry_per_step`
-    vehicles per second, modelling the driver behaviour of yielding to
-    circulating traffic and only merging when a gap appears. This is a
-    structurally different control mechanism from a fixed-time signal,
-    not just "a signal with a short green time".
+    Instead, each entrance may merge at most `max_entry_per_step` vehicles
+    per second. A merge is accepted only when its conflicting circulating
+    segment is empty and the ring segment immediately downstream has room.
+    Separate entries can merge during the same step when their own conflict
+    zones are clear.
     """
 
-    def __init__(self, entry_edges: list[tuple[str, str]], max_entry_per_step: int = 1):
+    def __init__(
+        self,
+        entry_edges: list[tuple[str, str]],
+        max_entry_per_step: int = 1,
+        *,
+        roads=None,
+        conflict_edges: dict[tuple[str, str], tuple[str, str]] | None = None,
+        downstream_edges: dict[tuple[str, str], tuple[str, str]] | None = None,
+    ):
         self.entry_edges = set(entry_edges)
         self.max_entry_per_step = max_entry_per_step
+        self.roads = roads or {}
+        self.conflict_edges = conflict_edges or {}
+        self.downstream_edges = downstream_edges or {}
         self._merges_this_step: dict[tuple[str, str], int] = {}
         self._current_t = -1
 
@@ -114,7 +132,18 @@ class YieldController(TrafficController):
         if edge not in self.entry_edges:
             return True  # not a controlled edge -> free flow
         self._reset_if_new_step(t)
-        return self._merges_this_step[edge] < self.max_entry_per_step
+        if self._merges_this_step[edge] >= self.max_entry_per_step:
+            return False
+
+        conflict_edge = self.conflict_edges.get(edge)
+        if conflict_edge and self.roads[conflict_edge].vehicles_on_road:
+            return False
+
+        downstream_edge = self.downstream_edges.get(edge)
+        if downstream_edge and not self.roads[downstream_edge].has_capacity():
+            return False
+
+        return True
 
     def notify_merge(self, edge: tuple[str, str], t: int):
         """Call this once a vehicle actually merges, to consume its slot."""
@@ -127,6 +156,6 @@ class YieldController(TrafficController):
 
     def describe(self) -> str:
         return (
-            f"Yield / gap-acceptance control, max {self.max_entry_per_step} "
-            f"merge(s) per approach per second"
+            f"Yield / circulating-gap control, max {self.max_entry_per_step} "
+            f"merge(s) per entrance per second"
         )

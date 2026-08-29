@@ -77,18 +77,32 @@ class SimPyTrafficSimulation:
     def _arrival_process(self, env, sim_time, rng):
         while env.now < sim_time:
             for entry_node in self.network.entry_nodes:
-                direction = entry_node.split("_")[0]
-                for _ in range(_poisson(self.demand_per_second.get(direction, 0), rng)):
-                    destination = _weighted_choice(
-                        self.destination_probs[direction], rng
+                demand_key = (
+                    entry_node
+                    if entry_node in self.demand_per_second
+                    else entry_node.split("_")[0]
+                )
+                for _ in range(_poisson(self.demand_per_second.get(demand_key, 0), rng)):
+                    probabilities = self.destination_probs.get(
+                        entry_node, self.destination_probs.get(demand_key)
+                    )
+                    if not probabilities:
+                        raise ValueError(
+                            f"No destination probabilities for {entry_node!r}"
+                        )
+                    destination = _weighted_choice(probabilities, rng)
+                    destination_node = (
+                        destination
+                        if destination in self.network.exit_nodes
+                        else f"{destination}_out"
                     )
                     route = self.network.shortest_path_dijkstra(
-                        entry_node, f"{destination}_out"
+                        entry_node, destination_node
                     )
                     vehicle = Vehicle(
                         self._next_vehicle_id,
                         entry_node,
-                        f"{destination}_out",
+                        destination_node,
                         route,
                         int(env.now),
                     )

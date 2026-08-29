@@ -8,5 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+.uv-cache/
 
+# Generated caches and experiment output
+.mpl-cache/
+cache/
+output-*/
 src/output/

@@ -39,8 +39,16 @@ from experiments import (
 )
 from validation import run_all_validations
 from visualization import generate_all_plots
-from osm_network import load_osm_network, intersection_candidates
-from intersection_geometry import extract_intersection_geometry
+from osm_network import (
+    intersection_candidates,
+    extract_intersection_geometry,
+    load_osm_network,
+    load_osm_network_file,
+    save_osm_network,
+)
+from osm_simulation import run_osm_simulation_study
+from intersection_catalog import export_four_way_intersections
+from replacement_experiment import export_replacement_experiment
 
 
 def build_results_table(exp_a_output: dict) -> pd.DataFrame:
@@ -118,6 +126,10 @@ def main():
         description="Intersection Design & Graph Theory traffic study"
     )
     parser.add_argument("--quick", action="store_true", help="fast smoke-test run")
+    parser.add_argument(
+        "--sim-time", type=int, help="override simulation duration in seconds"
+    )
+    parser.add_argument("--runs", type=int, help="override repeated-run count")
     parser.add_argument("--outdir", default=cfg.OUTPUT_DIR)
     parser.add_argument(
         "--engine",
@@ -131,6 +143,46 @@ def main():
     parser.add_argument("--osm-radius", type=float, default=cfg.OSM_ANALYSIS_RADIUS_M)
     parser.add_argument("--osm-node", help="optional OSM node ID for geometry")
     parser.add_argument(
+        "--osm-load-graph",
+        help="load a previously saved OSM GraphML file instead of downloading",
+    )
+    parser.add_argument(
+        "--osm-save-graph",
+        help="save the downloaded OSM graph to this GraphML file",
+    )
+    parser.add_argument(
+        "--osm-export-four-way",
+        help="export four-way candidates to CSV and GeoJSON using this file prefix",
+    )
+    parser.add_argument(
+        "--run-replacements",
+        action="store_true",
+        help="compare four local designs at important four-way intersections",
+    )
+    parser.add_argument(
+        "--replacement-sites",
+        type=int,
+        default=10,
+        help="number of important intersections in the replacement experiment",
+    )
+    parser.add_argument(
+        "--osm-simulate",
+        action="store_true",
+        help="convert the selected OSM network and run the real-map simulation",
+    )
+    parser.add_argument(
+        "--osm-portals",
+        type=int,
+        default=cfg.OSM_PORTAL_COUNT,
+        help="number of boundary origin/destination portals",
+    )
+    parser.add_argument(
+        "--osm-demand-rate",
+        type=float,
+        default=cfg.OSM_TOTAL_DEMAND_PER_SECOND,
+        help="total synthetic arrivals per second across all OSM portals",
+    )
+    parser.add_argument(
         "--od-demand",
         help='optional JSON file with OD keys such as {"N->S": 2}',
     )
@@ -139,6 +191,24 @@ def main():
 
     if (args.osm_latitude is None) != (args.osm_longitude is None):
         parser.error("--osm-latitude and --osm-longitude must be supplied together")
+    if args.osm_load_graph and (
+        args.osm_place or args.osm_latitude is not None or args.osm_longitude is not None
+    ):
+        parser.error("--osm-load-graph cannot be combined with a place or coordinate")
+    if args.osm_save_graph and not (
+        args.osm_place or args.osm_latitude is not None or args.osm_load_graph
+    ):
+        parser.error("--osm-save-graph requires a place, coordinate, or loaded graph")
+    if args.osm_export_four_way and not (
+        args.osm_place or args.osm_latitude is not None or args.osm_load_graph
+    ):
+        parser.error("--osm-export-four-way requires a place, coordinate, or loaded graph")
+    if args.run_replacements and not (
+        args.osm_place or args.osm_latitude is not None or args.osm_load_graph
+    ):
+        parser.error("--run-replacements requires a place, coordinate, or loaded graph")
+    if args.replacement_sites <= 0:
+        parser.error("--replacement-sites must be positive")
 
     od_demand = None
     if args.od_demand:
@@ -152,15 +222,38 @@ def main():
         except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
             parser.error(f"invalid OD demand file: {exc}")
 
-    if args.osm_place or args.osm_latitude is not None:
+    sim_time = args.sim_time if args.sim_time is not None else (
+        60 if args.quick else cfg.SIMULATION_TIME
+    )
+    n_runs = args.runs if args.runs is not None else (
+        3 if args.quick else cfg.NUMBER_OF_RUNS
+    )
+    if sim_time <= 0 or n_runs <= 0:
+        parser.error("--sim-time and --runs must be positive")
+
+    if (
+        args.osm_place
+        or args.osm_latitude is not None
+        or args.osm_load_graph
+        or args.osm_export_four_way
+        or args.run_replacements
+        or args.osm_simulate
+    ):
         print("\nOSM NETWORK INSPECTION")
         try:
-            osm = load_osm_network(
-                place=args.osm_place,
-                latitude=args.osm_latitude,
-                longitude=args.osm_longitude,
-                radius_m=args.osm_radius,
-            )
+            if args.osm_load_graph:
+                osm = load_osm_network_file(args.osm_load_graph)
+                print(f"Loaded graph: {args.osm_load_graph}")
+            else:
+                osm = load_osm_network(
+                    place=args.osm_place or cfg.OSM_PLACE,
+                    latitude=args.osm_latitude,
+                    longitude=args.osm_longitude,
+                    radius_m=args.osm_radius,
+                )
+            if args.osm_save_graph:
+                saved_graph = save_osm_network(osm, args.osm_save_graph)
+                print(f"Saved graph: {saved_graph}")
             candidates = intersection_candidates(osm.graph)
             print(f"Source: {osm.source}")
             print(
@@ -168,6 +261,70 @@ def main():
                 f"{osm.graph.number_of_edges()} edges"
             )
             print(f"Top intersection candidates: {candidates[:5]}")
+            if args.osm_export_four_way:
+                catalog = export_four_way_intersections(
+                    osm.graph, args.osm_export_four_way
+                )
+                table = catalog["table"]
+                likely_count = int(table["likely_geometric_cross"].sum())
+                print(
+                    f"Four-way catalog: {len(table)} topology candidates, "
+                    f"{likely_count} likely geometric crosses"
+                )
+                print(f"Saved CSV: {catalog['csv']}")
+                print(f"Saved GeoJSON: {catalog['geojson']}")
+                if not args.osm_simulate and not args.run_replacements:
+                    return
+            if args.run_replacements:
+                print("\nLOCAL INTERSECTION REPLACEMENT EXPERIMENT")
+                replacement = export_replacement_experiment(
+                    osm.graph,
+                    args.outdir,
+                    site_count=args.replacement_sites,
+                    sim_time=sim_time,
+                    n_runs=n_runs,
+                    total_demand_rate=args.osm_demand_rate,
+                )
+                summary = (
+                    replacement["results"]
+                    .groupby("design_name", as_index=False)
+                    .agg(
+                        mean_efficiency=("traffic_efficiency", "mean"),
+                        mean_efficiency_change_pct=(
+                            "traffic_efficiency_change_pct",
+                            "mean",
+                        ),
+                        mean_wait_s=("avg_waiting_time_s", "mean"),
+                        mean_throughput=("throughput_veh_s", "mean"),
+                    )
+                    .sort_values("mean_efficiency", ascending=False)
+                )
+                print("\n--- Selected Sites ---")
+                print(
+                    replacement["sites"][
+                        [
+                            "importance_rank",
+                            "osm_node_id",
+                            "street_names",
+                            "highway_types",
+                            "betweenness_centrality",
+                        ]
+                    ].to_string(index=False)
+                )
+                print("\n--- Mean Results Across Sites ---")
+                print(summary.to_string(index=False))
+                print(f"\nSaved sites: {replacement['sites_csv']}")
+                print(f"Saved readable site JSON: {replacement['sites_json']}")
+                print(f"Saved site map: {replacement['sites_geojson']}")
+                print(f"Saved results: {replacement['results_csv']}")
+                print(f"Saved comparison graph: {replacement['comparison_plot']}")
+                print(
+                    "Flyover and underpass intentionally use the same traffic "
+                    "graph. Their traffic results should match unless separate "
+                    "speed, capacity, cost, or risk assumptions are introduced."
+                )
+                if not args.osm_simulate:
+                    return
             if args.osm_node is not None:
                 node_id = args.osm_node
                 if node_id not in osm.nodes.index:
@@ -181,11 +338,105 @@ def main():
                     f"{len(geometry.nearby_edges)} nearby road geometries, "
                     f"{geometry.projected_crs}"
                 )
+            if args.osm_simulate:
+                print("\nOSM REAL-MAP SIMULATION")
+                study = run_osm_simulation_study(
+                    osm.graph,
+                    name=osm.source,
+                    sim_time=sim_time,
+                    n_runs=n_runs,
+                    total_demand_rate=args.osm_demand_rate,
+                    portal_count=args.osm_portals,
+                    engine=args.engine,
+                )
+                aggregate = study["traffic_metrics"]
+                stats = aggregate.stats
+                traffic_table = pd.DataFrame(
+                    [
+                        {
+                            "Network": osm.source,
+                            "Runs": n_runs,
+                            "Generated (mean)": round(
+                                sum(r.vehicles_generated for r in aggregate.raw_runs)
+                                / n_runs,
+                                1,
+                            ),
+                            "Completion %": round(
+                                stats["completion_rate"]["mean"] * 100, 2
+                            ),
+                            "Avg Waiting (s)": round(
+                                stats["avg_waiting_time"]["mean"], 2
+                            ),
+                            "Avg Queue": round(
+                                stats["avg_queue_length"]["mean"], 2
+                            ),
+                            "Throughput (veh/s)": round(
+                                stats["throughput_per_sec"]["mean"], 3
+                            ),
+                            "Efficiency": round(stats["efficiency"]["mean"], 3),
+                        }
+                    ]
+                )
+                graph = study["graph_metrics"]
+                graph_table = pd.DataFrame(
+                    [
+                        {
+                            "Network": osm.source,
+                            "Nodes": graph["nodes"],
+                            "Edges": graph["edges"],
+                            "OD Portals": graph["portals"],
+                            "Avg Portal Path (s)": round(
+                                graph["avg_portal_path_time_s"], 2
+                            ),
+                            "Demand-Weighted Graph Efficiency": round(
+                                graph["demand_weighted_graph_efficiency"], 6
+                            ),
+                            "Highest-Betweenness Node": graph[
+                                "top_betweenness_nodes"
+                            ][0][0],
+                        }
+                    ]
+                )
+                bottleneck_table = pd.DataFrame(
+                    [
+                        {
+                            "Road": f"{start} -> {end}",
+                            "Mean Saturation": round(saturation, 4),
+                            "Length (m)": study["network"].nx_graph.edges[
+                                start, end
+                            ].get("length_m"),
+                            "Highway": study["network"].nx_graph.edges[
+                                start, end
+                            ].get("highway"),
+                            "Lanes": study["network"].nx_graph.edges[
+                                start, end
+                            ].get("lanes"),
+                        }
+                        for (start, end), saturation in study["bottlenecks"]
+                    ]
+                )
+                print("\n--- Traffic Metrics ---")
+                print(traffic_table.to_string(index=False))
+                print("\n--- Graph-Theory Metrics ---")
+                print(graph_table.to_string(index=False))
+                print("\n--- Most Saturated Roads ---")
+                print(bottleneck_table.to_string(index=False))
+                print(
+                    "\nAssumption: OSM supplies geometry and road tags, while "
+                    "vehicle demand and control are synthetic. Unknown signal "
+                    "timing is modeled as free-flow capacity control."
+                )
+                os.makedirs(args.outdir, exist_ok=True)
+                traffic_path = os.path.join(args.outdir, "osm_traffic_metrics.csv")
+                graph_path = os.path.join(args.outdir, "osm_graph_metrics.csv")
+                bottleneck_path = os.path.join(args.outdir, "osm_bottlenecks.csv")
+                traffic_table.to_csv(traffic_path, index=False)
+                graph_table.to_csv(graph_path, index=False)
+                bottleneck_table.to_csv(bottleneck_path, index=False)
+                print(f"\nSaved: {traffic_path}, {graph_path}, {bottleneck_path}")
+                return
         except (KeyError, RuntimeError, ValueError) as exc:
-            parser.error(f"OSM inspection failed: {exc}")
-
-    sim_time = 60 if args.quick else cfg.SIMULATION_TIME
-    n_runs = 3 if args.quick else cfg.NUMBER_OF_RUNS
+            parser.error(f"OSM study failed: {exc}")
 
     os.makedirs(args.outdir, exist_ok=True)
 
@@ -304,7 +555,7 @@ bottleneck location, queueing, and ultimately traffic flow -- not merely
 a cosmetic difference in how an intersection looks.
 """)
 
-    print("Done. All charts and tables were written to:", os.path.abspath(args.outdir))
+    print("Done. All charts and tables were written to:", args.outdir)
 
 
 if __name__ == "__main__":

@@ -242,17 +242,25 @@ def create_roundabout():
     net.set_exit_nodes([f"{d}_out" for d in dirs])
 
     ring_nodes = {d: f"R_{d}" for d in dirs}
+    queue_nodes = {d: f"Q_{d}" for d in dirs}
 
     entry_edges = []
     for d in dirs:
         net.add_road(
             f"{d}_in",
-            ring_nodes[d],
+            queue_nodes[d],
             cfg.DEFAULT_APPROACH_CAPACITY,
             cfg.DEFAULT_APPROACH_TRAVEL_TIME,
+            controlled=False,
+        )
+        net.add_road(
+            queue_nodes[d],
+            ring_nodes[d],
+            cfg.DEFAULT_LINK_CAPACITY,
+            1,
             controlled=True,
         )
-        entry_edges.append((f"{d}_in", ring_nodes[d]))
+        entry_edges.append((queue_nodes[d], ring_nodes[d]))
         net.add_road(
             ring_nodes[d],
             f"{d}_out",
@@ -271,8 +279,21 @@ def create_roundabout():
             controlled=False,
         )
 
+    conflict_edges = {}
+    downstream_edges = {}
+    for i, d in enumerate(dirs):
+        previous = dirs[(i - 1) % len(dirs)]
+        following = dirs[(i + 1) % len(dirs)]
+        merge_edge = (queue_nodes[d], ring_nodes[d])
+        conflict_edges[merge_edge] = (ring_nodes[previous], ring_nodes[d])
+        downstream_edges[merge_edge] = (ring_nodes[d], ring_nodes[following])
+
     controller = YieldController(
-        entry_edges, max_entry_per_step=cfg.ROUNDABOUT_MAX_MERGE_PER_STEP
+        entry_edges,
+        max_entry_per_step=cfg.ROUNDABOUT_MAX_MERGE_PER_STEP,
+        roads=net.roads,
+        conflict_edges=conflict_edges,
+        downstream_edges=downstream_edges,
     )
 
     dest_probs = {d: _default_dest_probs(d, dirs) for d in dirs}

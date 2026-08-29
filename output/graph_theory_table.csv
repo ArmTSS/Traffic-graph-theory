@@ -1,0 +1,6 @@
+Intersection,|V| Nodes,|E| Edges,Approaches,Max Core Degree,Avg Path Length (s),Weighted Graph Efficiency,Fully Connected,Highest-Betweenness Node
+Four-Way,9,8,4,8,3.0,0.157407,True,I
+T-Intersection,7,6,3,6,3.0,0.178571,True,I
+Staggered,10,10,4,6,4.333,0.151111,True,I1
+Roundabout,16,16,4,4,8.0,0.120661,True,R_N
+Five-Way,11,10,5,10,3.0,0.143939,True,I

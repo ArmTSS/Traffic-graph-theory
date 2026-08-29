@@ -73,19 +73,35 @@ class TrafficSimulation:
         self._next_vehicle_id = 0
         self._all_vehicles: List[Vehicle] = []
 
+    def _demand_key(self, entry_node: str) -> str:
+        """Support both legacy N_in labels and direct real-map node labels."""
+        if entry_node in self.demand_per_second:
+            return entry_node
+        return entry_node.split("_")[0]
+
+    def _destination_node(self, entry_node: str, demand_key: str, rng) -> str:
+        probabilities = self.destination_probs.get(
+            entry_node, self.destination_probs.get(demand_key)
+        )
+        if not probabilities:
+            raise ValueError(f"No destination probabilities for {entry_node!r}")
+        destination = _weighted_choice(probabilities, rng)
+        if destination in self.network.exit_nodes:
+            return destination
+        return f"{destination}_out"
+
     # ------------------------------------------------------------------
     def _generate_vehicles(self, t: int, rng: random.Random):
         for entry_node in self.network.entry_nodes:
-            direction = entry_node.split("_")[0]
-            rate = self.demand_per_second.get(direction, 0)
+            demand_key = self._demand_key(entry_node)
+            rate = self.demand_per_second.get(demand_key, 0)
             if rate <= 0:
                 continue
             # Poisson arrivals -- captures the natural randomness of real
             # traffic instead of a smooth/deterministic `rate * t` formula.
             n_arrivals = _poisson(rate, rng)
             for _ in range(n_arrivals):
-                dest_dir = _weighted_choice(self.destination_probs[direction], rng)
-                exit_node = f"{dest_dir}_out"
+                exit_node = self._destination_node(entry_node, demand_key, rng)
                 route = self.network.shortest_path_dijkstra(entry_node, exit_node)
                 v = Vehicle(
                     vehicle_id=self._next_vehicle_id,
@@ -127,7 +143,7 @@ class TrafficSimulation:
         for road in self.network.roads.values():
             arrived = road.step()
             for v in arrived:
-                if v.current_node in self.network.exit_nodes:
+                if v.current_node == v.destination:
                     v.completed = True
                     v.completion_time = t + 1
                 else:
@@ -168,6 +184,7 @@ class TrafficSimulation:
         result.vehicles_remaining = (
             result.vehicles_generated - result.vehicles_completed
         )
+        result.generated_count = result.vehicles_generated
 
         for key, road in self.network.roads.items():
             result.edge_total_entries[key] = road.total_entries
