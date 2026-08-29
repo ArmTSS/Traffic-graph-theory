@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import json
 import math
+from html import escape
 from pathlib import Path
 
 import geopandas as gpd
@@ -166,6 +167,7 @@ def select_important_four_way_intersections(
     *,
     centrality_samples: int = 200,
     minimum_spacing_m: float = 500.0,
+    exclude_adjacent: bool = False,
 ) -> pd.DataFrame:
     """Select spatially separated arterial four-ways by graph betweenness."""
     if count <= 0:
@@ -201,7 +203,8 @@ def select_important_four_way_intersections(
 
     selected_rows = []
     for _, row in eligible.iterrows():
-        if all(
+        row_node = int(row["osm_node_id"])
+        separated = all(
             _haversine_m(
                 row["latitude"],
                 row["longitude"],
@@ -210,18 +213,34 @@ def select_important_four_way_intersections(
             )
             >= minimum_spacing_m
             for chosen in selected_rows
-        ):
+        )
+        nonadjacent = not exclude_adjacent or all(
+            not graph.has_edge(row_node, int(chosen["osm_node_id"]))
+            and not graph.has_edge(int(chosen["osm_node_id"]), row_node)
+            for chosen in selected_rows
+        )
+        if separated and nonadjacent:
             selected_rows.append(row)
         if len(selected_rows) == count:
             break
     if len(selected_rows) < count:
         selected_ids = {row["osm_node_id"] for row in selected_rows}
         for _, row in eligible.iterrows():
-            if row["osm_node_id"] not in selected_ids:
+            row_node = int(row["osm_node_id"])
+            nonadjacent = not exclude_adjacent or all(
+                not graph.has_edge(row_node, int(chosen["osm_node_id"]))
+                and not graph.has_edge(int(chosen["osm_node_id"]), row_node)
+                for chosen in selected_rows
+            )
+            if row["osm_node_id"] not in selected_ids and nonadjacent:
                 selected_rows.append(row)
                 selected_ids.add(row["osm_node_id"])
             if len(selected_rows) == count:
                 break
+    if len(selected_rows) < count:
+        raise ValueError(
+            f"only {len(selected_rows)} nonadjacent eligible intersections available"
+        )
 
     selected = pd.DataFrame(selected_rows).reset_index(drop=True)
     selected.insert(0, "importance_rank", range(1, len(selected) + 1))
@@ -677,6 +696,340 @@ def plot_demand_sweep_comparison(
     )
     figure.tight_layout(rect=(0, 0, 1, 0.925))
     figure.savefig(output_path, dpi=180, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
+def export_replacement_traffic_map(
+    results: pd.DataFrame, output_path: str | Path
+) -> Path:
+    """Write an interactive OSM map of design results by demand and site."""
+    required = {
+        "importance_rank",
+        "osm_node_id",
+        "latitude",
+        "longitude",
+        "street_names",
+        "demand_level",
+        "total_demand_rate",
+        "design",
+        "design_name",
+        "completion_rate",
+        "avg_waiting_time_s",
+        "avg_queue_length",
+        "throughput_veh_s",
+        "traffic_efficiency",
+    }
+    missing = required - set(results.columns)
+    if missing:
+        raise ValueError(f"map results are missing columns: {sorted(missing)}")
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    records = json.loads(results[list(required)].to_json(orient="records"))
+    data_json = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
+    design_json = json.dumps(
+        {
+            "four_way": {"label": DESIGN_NAMES["four_way"], "symbol": "+"},
+            "roundabout": {"label": DESIGN_NAMES["roundabout"], "symbol": "↻"},
+            "flyover": {"label": DESIGN_NAMES["flyover"], "symbol": "↑"},
+            "underpass": {"label": DESIGN_NAMES["underpass"], "symbol": "↓"},
+        },
+        ensure_ascii=False,
+    )
+    demand_options = "".join(
+        f'<option value="{escape(str(level))}">{escape(str(level).title())} '
+        f'({rate:g} veh/s)</option>'
+        for level, rate in results[
+            ["demand_level", "total_demand_rate"]
+        ].drop_duplicates().itertuples(index=False, name=None)
+    )
+    design_options = "".join(
+        f'<option value="{key}">{escape(label)}</option>'
+        for key, label in DESIGN_NAMES.items()
+    )
+    html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khlong Sam Wa Traffic Replacement Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root {{ --ink:#17212b; --muted:#59636e; --panel:#ffffff; --line:#d7dde3; }}
+    * {{ box-sizing:border-box; letter-spacing:0; }}
+    html, body, #map {{ width:100%; height:100%; margin:0; }}
+    body {{ font-family:Inter,Segoe UI,Arial,sans-serif; color:var(--ink); }}
+    #map {{ background:#dfe7e5; }}
+    .toolbar {{ position:absolute; z-index:1000; top:16px; left:16px; width:310px;
+      background:var(--panel); border:1px solid var(--line); border-radius:6px;
+      box-shadow:0 6px 22px rgba(23,33,43,.16); padding:14px; }}
+    h1 {{ margin:0 0 12px; font-size:18px; line-height:1.25; }}
+    .controls {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
+    label {{ display:block; color:var(--muted); font-size:11px; font-weight:700;
+      text-transform:uppercase; margin-bottom:5px; }}
+    select {{ width:100%; min-width:0; height:36px; border:1px solid #aeb7c0;
+      border-radius:4px; background:#fff; color:var(--ink); padding:0 8px; font-size:13px; }}
+    .counts {{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:12px; }}
+    .count {{ border-top:3px solid var(--color); background:#f5f7f8; padding:7px 5px;
+      text-align:center; font-size:11px; }}
+    .count strong {{ display:block; font-size:17px; }}
+    .method {{ margin:10px 0 0; color:var(--muted); font-size:11px; line-height:1.4; }}
+    .traffic-marker {{ width:34px; height:34px; border:3px solid white; border-radius:50%;
+      color:white; display:grid; place-items:center; font-weight:800; font-size:20px;
+      line-height:1; box-shadow:0 2px 7px rgba(23,33,43,.4); }}
+    .status-good {{ background:#15803d; }} .status-busy {{ background:#d97706; }}
+    .status-bad {{ background:#c62828; }}
+    .leaflet-popup-content-wrapper {{ border-radius:6px; }}
+    .popup {{ min-width:220px; }} .popup h2 {{ font-size:15px; margin:0 0 3px; }}
+    .popup .street {{ color:var(--muted); margin-bottom:9px; }}
+    .metrics {{ display:grid; grid-template-columns:1fr auto; gap:5px 14px; font-size:12px; }}
+    .metrics strong {{ text-align:right; }} .popup a {{ display:inline-block; margin-top:10px;
+      color:#075ea8; font-size:12px; }}
+    @media (max-width:600px) {{ .toolbar {{ top:8px; left:8px; width:calc(100% - 16px); }}
+      .leaflet-control-zoom {{ margin-top:218px !important; }} }}
+  </style>
+</head>
+<body>
+  <main id="map" aria-label="Khlong Sam Wa traffic replacement map"></main>
+  <section class="toolbar" aria-label="Map controls">
+    <h1>Khlong Sam Wa Traffic Map</h1>
+    <div class="controls">
+      <div><label for="demand">Demand</label><select id="demand" data-testid="demand-select">{demand_options}</select></div>
+      <div><label for="design">Design</label><select id="design" data-testid="design-select">{design_options}</select></div>
+    </div>
+    <div class="counts" aria-live="polite">
+      <div class="count" style="--color:#15803d"><strong id="good-count">0</strong>Good</div>
+      <div class="count" style="--color:#d97706"><strong id="busy-count">0</strong>Busy</div>
+      <div class="count" style="--color:#c62828"><strong id="bad-count">0</strong>Bad</div>
+    </div>
+    <p class="method">Traffic efficiency: green ≥ 0.80, amber 0.60–0.79, red &lt; 0.60.</p>
+  </section>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const results = {data_json};
+    const designs = {design_json};
+    const map = L.map('map', {{ zoomControl:true }});
+    L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+      maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+    }}).addTo(map);
+    const markerLayer = L.layerGroup().addTo(map);
+    const bounds = L.latLngBounds(results.map(row => [row.latitude, row.longitude]));
+    map.fitBounds(bounds.pad(0.22));
+
+    function escapeHtml(value) {{
+      return String(value ?? '').replace(/[&<>"']/g, char => ({{
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+      }})[char]);
+    }}
+    function statusFor(efficiency) {{
+      if (efficiency >= 0.8) return {{ key:'good', label:'Good traffic' }};
+      if (efficiency >= 0.6) return {{ key:'busy', label:'Busy traffic' }};
+      return {{ key:'bad', label:'Bad traffic' }};
+    }}
+    function metric(value, digits=2) {{ return Number(value).toFixed(digits); }}
+    function render() {{
+      markerLayer.clearLayers();
+      const demand = document.getElementById('demand').value;
+      const design = document.getElementById('design').value;
+      const counts = {{ good:0, busy:0, bad:0 }};
+      results.filter(row => row.demand_level === demand && row.design === design).forEach(row => {{
+        const status = statusFor(row.traffic_efficiency); counts[status.key] += 1;
+        const symbol = designs[design].symbol;
+        const icon = L.divIcon({{
+          className:'', iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-17],
+          html:`<div class="traffic-marker status-${{status.key}}">${{symbol}}</div>`
+        }});
+        const street = row.street_names || `OSM node ${{row.osm_node_id}}`;
+        const popup = `<div class="popup"><h2>#${{row.importance_rank}} · ${{escapeHtml(designs[design].label)}}</h2>
+          <div class="street">${{escapeHtml(street)}} · ${{status.label}}</div>
+          <div class="metrics"><span>Traffic efficiency</span><strong>${{metric(row.traffic_efficiency,3)}}</strong>
+          <span>Average waiting</span><strong>${{metric(row.avg_waiting_time_s)}} s</strong>
+          <span>Average queue</span><strong>${{metric(row.avg_queue_length)}} vehicles</strong>
+          <span>Throughput</span><strong>${{metric(row.throughput_veh_s,3)}} veh/s</strong>
+          <span>Completion rate</span><strong>${{metric(row.completion_rate*100,1)}}%</strong></div>
+          <a href="https://www.openstreetmap.org/node/${{encodeURIComponent(row.osm_node_id)}}" target="_blank" rel="noopener">Open OSM location</a></div>`;
+        L.marker([row.latitude,row.longitude], {{icon}}).bindTooltip(`#${{row.importance_rank}} · ${{status.label}}`).bindPopup(popup).addTo(markerLayer);
+      }});
+      for (const key of ['good','busy','bad']) document.getElementById(`${{key}}-count`).textContent = counts[key];
+    }}
+    document.getElementById('demand').addEventListener('change', render);
+    document.getElementById('design').addEventListener('change', render);
+    render();
+  </script>
+</body>
+</html>
+"""
+    output_path.write_text(html, encoding="utf-8")
+    return output_path
+
+
+def plot_replacement_traffic_map(
+    graph, results: pd.DataFrame, output_path: str | Path
+) -> Path:
+    """Plot an offline road map for every demand/design combination."""
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    from matplotlib.lines import Line2D
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    levels = results[["demand_level", "total_demand_rate"]].drop_duplicates()
+    if levels.empty:
+        raise ValueError("cannot plot a replacement map without results")
+
+    minor_segments, arterial_segments = [], []
+    for start, end, data in graph.edges(data=True):
+        geometry = data.get("geometry")
+        if geometry is not None and hasattr(geometry, "coords"):
+            segment = list(geometry.coords)
+        else:
+            start_data, end_data = graph.nodes[start], graph.nodes[end]
+            segment = [
+                (float(start_data["x"]), float(start_data["y"])),
+                (float(end_data["x"]), float(end_data["y"])),
+            ]
+        highway = data.get("highway", "")
+        highway_values = highway if isinstance(highway, list) else [highway]
+        target = (
+            arterial_segments
+            if any(str(value) in ARTERIAL_CLASSES for value in highway_values)
+            else minor_segments
+        )
+        target.append(segment)
+
+    design_symbols = {
+        "four_way": "+",
+        "roundabout": "↻",
+        "flyover": "↑",
+        "underpass": "↓",
+    }
+    status_colors = {"good": "#15803d", "busy": "#d97706", "bad": "#c62828"}
+    site_count = results["importance_rank"].nunique()
+    marker_size = 105 if site_count > 20 else 165
+    symbol_size = 10 if site_count > 20 else 13
+    show_rank_labels = site_count <= 15
+    figure, axes = plt.subplots(
+        len(levels),
+        len(DESIGN_NAMES),
+        figsize=(18, 4.6 * len(levels)),
+        squeeze=False,
+    )
+    min_lon, max_lon = results["longitude"].min(), results["longitude"].max()
+    min_lat, max_lat = results["latitude"].min(), results["latitude"].max()
+    mean_latitude = (min_lat + max_lat) / 2
+    center_lon, center_lat = (min_lon + max_lon) / 2, mean_latitude
+    longitude_scale = math.cos(math.radians(mean_latitude))
+    longitude_span = max_lon - min_lon
+    latitude_span = max_lat - min_lat
+    geographic_width = longitude_span * longitude_scale
+    target_span = max(geographic_width, latitude_span, 0.008)
+    longitude_span = target_span / longitude_scale
+    latitude_span = target_span
+    min_lon, max_lon = center_lon - longitude_span / 2, center_lon + longitude_span / 2
+    min_lat, max_lat = center_lat - latitude_span / 2, center_lat + latitude_span / 2
+    lon_padding = longitude_span * 0.07
+    lat_padding = latitude_span * 0.07
+
+    for row_index, level in levels.reset_index(drop=True).iterrows():
+        for column_index, (design_key, design_name) in enumerate(DESIGN_NAMES.items()):
+            axis = axes[row_index, column_index]
+            axis.add_collection(
+                LineCollection(minor_segments, colors="#d5d9dc", linewidths=0.35)
+            )
+            axis.add_collection(
+                LineCollection(arterial_segments, colors="#8b949c", linewidths=0.8)
+            )
+            rows = results[
+                (results["demand_level"] == level["demand_level"])
+                & (results["design"] == design_key)
+            ].sort_values("importance_rank")
+            for site in rows.itertuples(index=False):
+                rank = int(site.importance_rank)
+                status = (
+                    "good"
+                    if site.traffic_efficiency >= 0.8
+                    else "busy" if site.traffic_efficiency >= 0.6 else "bad"
+                )
+                axis.scatter(
+                    site.longitude,
+                    site.latitude,
+                    s=marker_size,
+                    color=status_colors[status],
+                    edgecolor="white",
+                    linewidth=1.6,
+                    zorder=4,
+                )
+                axis.text(
+                    site.longitude,
+                    site.latitude,
+                    design_symbols[design_key],
+                    color="white",
+                    fontsize=symbol_size,
+                    fontweight="bold",
+                    ha="center",
+                    va="center",
+                    zorder=5,
+                )
+                if show_rank_labels:
+                    label_x, label_y = {
+                        4: (-8, 8),
+                        7: (-8, -11),
+                    }.get(rank, (7, 6))
+                    axis.annotate(
+                        f"#{rank}",
+                        (site.longitude, site.latitude),
+                        xytext=(label_x, label_y),
+                        textcoords="offset points",
+                        fontsize=7,
+                        color="#17212b",
+                        ha="right" if label_x < 0 else "left",
+                        bbox={
+                            "facecolor": "white",
+                            "edgecolor": "none",
+                            "alpha": 0.78,
+                            "pad": 1,
+                        },
+                        zorder=6,
+                    )
+            axis.set_xlim(min_lon - lon_padding, max_lon + lon_padding)
+            axis.set_ylim(min_lat - lat_padding, max_lat + lat_padding)
+            axis.set_aspect(1 / math.cos(math.radians(mean_latitude)))
+            axis.set_title(
+                f"{design_name}\n{str(level['demand_level']).title()} demand "
+                f"({level['total_demand_rate']:g} veh/s)",
+                fontsize=11,
+            )
+            axis.set_xticks([])
+            axis.set_yticks([])
+            for spine in axis.spines.values():
+                spine.set_color("#c8cdd2")
+
+    legend = [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor=color,
+            markeredgecolor="white",
+            markersize=10,
+            label=label,
+        )
+        for color, label in (
+            (status_colors["good"], "Good: efficiency ≥ 0.80"),
+            (status_colors["busy"], "Busy: efficiency 0.60–0.79"),
+            (status_colors["bad"], "Bad: efficiency < 0.60"),
+        )
+    ]
+    figure.legend(handles=legend, ncol=3, frameon=False, loc="lower center")
+    figure.suptitle(
+        "Khlong Sam Wa: Simulated Traffic by Intersection Design",
+        fontsize=17,
+        y=0.995,
+    )
+    figure.tight_layout(rect=(0, 0.045, 1, 0.97))
+    figure.savefig(output_path, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close(figure)
     return output_path
 

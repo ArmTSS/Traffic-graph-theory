@@ -38,6 +38,26 @@ class FreeFlowController(TrafficController):
         return "Free-flow control (capacity constraints only)"
 
 
+class CompositeController(TrafficController):
+    """Delegate controlled edges to independent intersection controllers."""
+
+    def __init__(self, edge_controllers: dict[tuple[str, str], TrafficController]):
+        self.edge_controllers = dict(edge_controllers)
+
+    def is_allowed(self, edge: tuple[str, str], t: int) -> bool:
+        controller = self.edge_controllers.get(edge)
+        return controller.is_allowed(edge, t) if controller else True
+
+    def notify_merge(self, edge: tuple[str, str], t: int):
+        controller = self.edge_controllers.get(edge)
+        if controller and hasattr(controller, "notify_merge"):
+            controller.notify_merge(edge, t)
+
+    def describe(self) -> str:
+        controller_count = len(set(map(id, self.edge_controllers.values())))
+        return f"Composite district control ({controller_count} intersections)"
+
+
 class FixedTimeSignalController(TrafficController):
     """
     Classic traffic-light controller (Section 9).

@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from controller import FreeFlowController, YieldController
 from designs import create_roundabout
+from district_replacement_experiment import build_coupled_district_network
 from graph_model import IntersectionNetwork
 from intersection_catalog import (
     export_four_way_intersections,
@@ -26,6 +27,7 @@ from osm_simulation import (
 from replacement_experiment import (
     build_local_replacement_variants,
     build_selected_intersections_json,
+    export_replacement_traffic_map,
 )
 from simulation import TrafficSimulation
 
@@ -85,6 +87,65 @@ class RoadEstimationTests(unittest.TestCase):
 
 
 class OSMConversionTests(unittest.TestCase):
+    def test_coupled_replacements_share_one_routable_district_graph(self):
+        import pandas as pd
+
+        graph = nx.MultiDiGraph(crs="epsg:4326")
+        graph.add_node(0, x=100.0, y=13.0)
+        for node, x, y in [
+            (1, 100.0, 13.01),
+            (2, 100.01, 13.0),
+            (3, 100.0, 12.99),
+            (4, 99.99, 13.0),
+        ]:
+            graph.add_node(node, x=x, y=y)
+            for start, end in ((0, node), (node, 0)):
+                graph.add_edge(
+                    start,
+                    end,
+                    length=100,
+                    highway="secondary",
+                    lanes="2",
+                    maxspeed="40",
+                )
+        sites = pd.DataFrame([{"osm_node_id": 0}])
+        for design in ("four_way", "roundabout", "flyover", "underpass"):
+            with self.subTest(design=design):
+                network, controller, observed = build_coupled_district_network(
+                    graph, sites, design, portal_count=2
+                )
+                self.assertTrue(all(network.connectivity_report().values()))
+                self.assertGreaterEqual(len(observed["0"]), 4)
+                self.assertTrue(controller.edge_controllers)
+
+    def test_exports_interactive_replacement_map(self):
+        import pandas as pd
+
+        row = {
+            "importance_rank": 1,
+            "osm_node_id": "123",
+            "latitude": 13.8,
+            "longitude": 100.7,
+            "street_names": "Test Road",
+            "demand_level": "high",
+            "total_demand_rate": 2.0,
+            "design": "roundabout",
+            "design_name": "Roundabout",
+            "completion_rate": 0.7,
+            "avg_waiting_time_s": 40.0,
+            "avg_queue_length": 12.0,
+            "throughput_veh_s": 1.1,
+            "traffic_efficiency": 0.5,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = export_replacement_traffic_map(
+                pd.DataFrame([row]), Path(directory) / "map.html"
+            )
+            content = path.read_text(encoding="utf-8")
+        self.assertIn("Khlong Sam Wa Traffic Map", content)
+        self.assertIn('"traffic_efficiency": 0.5', content)
+        self.assertIn("status-bad", content)
+
     def test_roundabout_queues_at_merge_and_yields_to_circulating_traffic(self):
         network, controller, _ = create_roundabout()
         self.assertIsInstance(controller, YieldController)

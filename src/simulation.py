@@ -19,7 +19,7 @@ from typing import Dict, List, Tuple
 
 from vehicle import Vehicle
 from graph_model import IntersectionNetwork
-from controller import TrafficController, YieldController
+from controller import CompositeController, TrafficController, YieldController
 
 
 @dataclass
@@ -44,6 +44,9 @@ class SimulationResult:
     edge_total_entries: Dict[Tuple[str, str], int] = field(default_factory=dict)
     edge_saturation: Dict[Tuple[str, str], float] = field(default_factory=dict)
     edge_capacity: Dict[Tuple[str, str], int] = field(default_factory=dict)
+    edge_waiting_vehicle_seconds: Dict[Tuple[str, str], int] = field(
+        default_factory=dict
+    )
 
     generated_count: int = 0  # kept for validation cross-check
 
@@ -72,6 +75,9 @@ class TrafficSimulation:
 
         self._next_vehicle_id = 0
         self._all_vehicles: List[Vehicle] = []
+        self._active_edges: set[Tuple[str, str]] = set()
+        self._route_cache: Dict[Tuple[str, str], List[str]] = {}
+        self._edge_waiting_vehicle_seconds: Dict[Tuple[str, str], int] = {}
 
     def _demand_key(self, entry_node: str) -> str:
         """Support both legacy N_in labels and direct real-map node labels."""
@@ -102,7 +108,11 @@ class TrafficSimulation:
             n_arrivals = _poisson(rate, rng)
             for _ in range(n_arrivals):
                 exit_node = self._destination_node(entry_node, demand_key, rng)
-                route = self.network.shortest_path_dijkstra(entry_node, exit_node)
+                route_key = (entry_node, exit_node)
+                route = self._route_cache.get(route_key)
+                if route is None:
+                    route = self.network.shortest_path_dijkstra(entry_node, exit_node)
+                    self._route_cache[route_key] = route
                 v = Vehicle(
                     vehicle_id=self._next_vehicle_id,
                     origin=entry_node,
@@ -131,23 +141,34 @@ class TrafficSimulation:
                 allowed = self.controller.is_allowed(edge, t)
                 if allowed and road.has_capacity():
                     road.enter(v)
-                    if isinstance(self.controller, YieldController):
+                    self._active_edges.add(edge)
+                    if isinstance(
+                        self.controller, (YieldController, CompositeController)
+                    ):
                         self.controller.notify_merge(edge, t)
                 else:
                     v.waiting_time += 1
+                    self._edge_waiting_vehicle_seconds[edge] = (
+                        self._edge_waiting_vehicle_seconds.get(edge, 0) + 1
+                    )
                     still_waiting.append(v)
             self.node_queues[node] = still_waiting
 
     # ------------------------------------------------------------------
     def _advance_roads(self, t: int):
-        for road in self.network.roads.values():
+        still_active = set()
+        for edge in self._active_edges:
+            road = self.network.roads[edge]
             arrived = road.step()
+            if road.vehicles_on_road:
+                still_active.add(edge)
             for v in arrived:
                 if v.current_node == v.destination:
                     v.completed = True
                     v.completion_time = t + 1
                 else:
                     self.node_queues[v.current_node].append(v)
+        self._active_edges = still_active
 
     # ------------------------------------------------------------------
     def run(self, sim_time: int, seed: int) -> SimulationResult:
@@ -185,6 +206,9 @@ class TrafficSimulation:
             result.vehicles_generated - result.vehicles_completed
         )
         result.generated_count = result.vehicles_generated
+        result.edge_waiting_vehicle_seconds = dict(
+            self._edge_waiting_vehicle_seconds
+        )
 
         for key, road in self.network.roads.items():
             result.edge_total_entries[key] = road.total_entries

@@ -23,6 +23,40 @@ veh/s), and high (`2.0` veh/s) total demand. Override them with
 `--low-demand`, `--medium-demand`, and `--high-demand`. Other controls are
 `--sites`, `--time`, `--runs`, `--graph`, and `--output`.
 
+Create an interactive map and offline PNG from existing results without
+rerunning the simulations:
+
+```powershell
+uv run python map_4way_compare.py
+```
+
+Use `--sites 5` to map only the top five intersections already present in the
+results. To map more sites than the result file contains, first rerun
+`seperate_4way_compare.py --sites N` and then run the map command.
+
+Use coupled mode when changes at one selected intersection should alter routes
+and traffic measured at the others:
+
+```powershell
+uv run python map_4way_compare.py --coupled --sites 5
+```
+
+Coupled mode embeds all selected sites in one full Khlong Sam Wa graph and
+applies each design as a district scenario. Its CSV, PNG, and HTML are written
+under `output/khlong_sam_wa_replacements/coupled` so the independent experiment
+is preserved. `--time`, `--runs`, `--portals`, and the three demand arguments
+control this more expensive simulation.
+
+Outer boundary portals and the real approach nodes around selected sites act
+as synthetic trip zones. Consequently, a replacement can change routes and
+traffic observed at other selected sites. All selected sites use the same
+design within one scenario. Routes remain fixed after vehicle creation, and
+node queues do not yet spill backward into upstream road segments.
+
+Intersection symbols show the selected design, while marker color classifies
+the composite traffic-efficiency score: green is at least `0.80`, amber is
+`0.60-0.79`, and red is below `0.60`.
+
 The step-based simulator in `simulation.py` is retained as a transparent
 reference implementation. `simpy_simulation.py` provides an event-driven
 alternative using capacity-constrained road resources and the same
