@@ -404,8 +404,8 @@ def build_local_replacement_variants(
         roundabout.add_road(
             ring_nodes[current["label"]],
             ring_nodes[following["label"]],
-            cfg.DEFAULT_LINK_CAPACITY,
-            cfg.DEFAULT_LINK_TRAVEL_TIME,
+            cfg.ROUNDABOUT_RING_CAPACITY,
+            cfg.ROUNDABOUT_RING_TRAVEL_TIME,
             length=15.0,
         )
     entry_edges = [
@@ -429,6 +429,7 @@ def build_local_replacement_variants(
             roads=roundabout.roads,
             conflict_edges=conflict_edges,
             downstream_edges=downstream_edges,
+            critical_occupancy=cfg.ROUNDABOUT_CRITICAL_GAP_OCCUPANCY,
         ),
         probabilities,
         demand,

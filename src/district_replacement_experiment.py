@@ -177,8 +177,8 @@ def build_coupled_district_network(graph, sites, design: str, *, portal_count: i
             network.add_road(
                 rings[label],
                 rings[following],
-                capacity=cfg.DEFAULT_LINK_CAPACITY,
-                travel_time=cfg.DEFAULT_LINK_TRAVEL_TIME,
+                capacity=cfg.ROUNDABOUT_RING_CAPACITY,
+                travel_time=cfg.ROUNDABOUT_RING_TRAVEL_TIME,
                 length=15.0,
             )
             merge_edge = (queues[label], rings[label])
@@ -190,6 +190,7 @@ def build_coupled_district_network(graph, sites, design: str, *, portal_count: i
             roads=network.roads,
             conflict_edges=conflicts,
             downstream_edges=downstream,
+            critical_occupancy=cfg.ROUNDABOUT_CRITICAL_GAP_OCCUPANCY,
         )
         for edge in merge_edges:
             edge_controllers[edge] = controller

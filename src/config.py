@@ -63,9 +63,18 @@ CONGESTION_BETA = 4.0
 # ---------------------------------------------------------------------------
 # 5. ROUNDABOUT-SPECIFIC
 # ---------------------------------------------------------------------------
-ROUNDABOUT_MAX_MERGE_PER_STEP = 1  # gap-acceptance: at most 1 car merges
+ROUNDABOUT_MAX_MERGE_PER_STEP = 2  # gap-acceptance: at most 2 cars merge
 # from a given approach per second,
-# modelling "yield to circulating traffic"
+# modelling multi-lane entry capacity
+ROUNDABOUT_RING_CAPACITY = 10  # vehicles stored per ring segment
+# (models a larger inscribed circle
+# than DEFAULT_LINK_CAPACITY)
+ROUNDABOUT_RING_TRAVEL_TIME = 1  # seconds per ring segment (shorter
+# ring arcs at moderate circulating speed)
+ROUNDABOUT_CRITICAL_GAP_OCCUPANCY = 0.5  # merge allowed when the upstream
+# circulating segment is below this
+# fraction of its capacity, modelling
+# available gaps between vehicles
 
 # ---------------------------------------------------------------------------
 # 6. REPEATED SIMULATION (Section 14)

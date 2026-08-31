@@ -274,8 +274,8 @@ def create_roundabout():
         net.add_road(
             ring_nodes[a],
             ring_nodes[b],
-            cfg.DEFAULT_LINK_CAPACITY,
-            cfg.DEFAULT_LINK_TRAVEL_TIME,
+            cfg.ROUNDABOUT_RING_CAPACITY,
+            cfg.ROUNDABOUT_RING_TRAVEL_TIME,
             controlled=False,
         )
 
@@ -294,6 +294,7 @@ def create_roundabout():
         roads=net.roads,
         conflict_edges=conflict_edges,
         downstream_edges=downstream_edges,
+        critical_occupancy=cfg.ROUNDABOUT_CRITICAL_GAP_OCCUPANCY,
     )
 
     dest_probs = {d: _default_dest_probs(d, dirs) for d in dirs}

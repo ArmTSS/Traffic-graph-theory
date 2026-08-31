@@ -134,12 +134,14 @@ class YieldController(TrafficController):
         roads=None,
         conflict_edges: dict[tuple[str, str], tuple[str, str]] | None = None,
         downstream_edges: dict[tuple[str, str], tuple[str, str]] | None = None,
+        critical_occupancy: float = 1.0,
     ):
         self.entry_edges = set(entry_edges)
         self.max_entry_per_step = max_entry_per_step
         self.roads = roads or {}
         self.conflict_edges = conflict_edges or {}
         self.downstream_edges = downstream_edges or {}
+        self.critical_occupancy = critical_occupancy
         self._merges_this_step: dict[tuple[str, str], int] = {}
         self._current_t = -1
 
@@ -156,8 +158,15 @@ class YieldController(TrafficController):
             return False
 
         conflict_edge = self.conflict_edges.get(edge)
-        if conflict_edge and self.roads[conflict_edge].vehicles_on_road:
-            return False
+        if conflict_edge:
+            road = self.roads[conflict_edge]
+            occupancy = (
+                len(road.vehicles_on_road) / road.capacity
+                if road.capacity > 0
+                else 1.0
+            )
+            if occupancy >= self.critical_occupancy:
+                return False
 
         downstream_edge = self.downstream_edges.get(edge)
         if downstream_edge and not self.roads[downstream_edge].has_capacity():
@@ -176,6 +185,7 @@ class YieldController(TrafficController):
 
     def describe(self) -> str:
         return (
-            f"Yield / circulating-gap control, max {self.max_entry_per_step} "
-            f"merge(s) per entrance per second"
+            f"Yield / gap-acceptance control, max {self.max_entry_per_step} "
+            f"merge(s) per entrance per second, conflict threshold "
+            f"{self.critical_occupancy:.0%}"
         )
